@@ -51,3 +51,7 @@ variable "cidr" {
 variable "num-nodes" {
   default = 3
 }
+
+variable "webhook-url" {
+  default = "http://apisnoop.sharing.io:9900"
+}

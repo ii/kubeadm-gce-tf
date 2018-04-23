@@ -29,8 +29,13 @@ data "template_file" "prereq-master" {
 // This script will install Kubernetes on the master.
 data "template_file" "master" {
   template = "${file("tf-scripts/master.sh")}"
+}
 
+// This is the kubeadm-config.yaml than enables the audit-webhook.
+data "template_file" "audit_webhook" {
+  template = "${file("tf-scripts/setup-audit-webhook.sh")}"
   vars {
+    webhook_url = "${var.webhook-url}"
     token        = "${var.bootstrap_token}"
     service-cidr = "${module.subnets.service_cidr}"
   }
@@ -49,6 +54,12 @@ data "template_cloudinit_config" "master" {
   }
 
   part {
+    filename     = "scripts/per-instance/15-webhook.sh"
+    content_type = "text/x-shellscript"
+    content      = "${data.template_file.audit_webhook.rendered}"
+  }
+
+  part {
     filename     = "scripts/per-instance/20-master.sh"
     content_type = "text/x-shellscript"
     content      = "${data.template_file.master.rendered}"
@@ -61,6 +72,7 @@ data "template_cloudinit_config" "master" {
     content_type = "text/x-shellscript"
     content      = "${data.template_file.iptables.rendered}"
   }
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -89,10 +101,12 @@ resource "google_compute_instance" "master" {
   // assigned to that VM.
   can_ip_forward = true
 
-  disk {
-    image = "ubuntu-os-cloud/ubuntu-1604-lts"
-    type  = "pd-ssd"
-    size  = "200"
+  boot_disk {
+    initialize_params {
+      image = "ubuntu-os-cloud/ubuntu-1604-lts"
+      type  = "pd-standard"
+      size  = "200"
+    }
   }
 
   metadata {
