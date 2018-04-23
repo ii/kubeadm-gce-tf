@@ -29,8 +29,13 @@ data "template_file" "prereq-master" {
 // This script will install Kubernetes on the master.
 data "template_file" "master" {
   template = "${file("tf-scripts/master.sh")}"
+}
 
+// This is the kubeadm-config.yaml than enables the audit-webhook.
+data "template_file" "audit_webhook" {
+  template = "${file("tf-scripts/setup-audit-webhook.sh")}"
   vars {
+    webhook_url = "${var.webhook-url}"
     token        = "${var.bootstrap_token}"
     service-cidr = "${module.subnets.service_cidr}"
   }
@@ -49,6 +54,12 @@ data "template_cloudinit_config" "master" {
   }
 
   part {
+    filename     = "scripts/per-instance/15-webhook.sh"
+    content_type = "text/x-shellscript"
+    content      = "${data.template_file.audit_webhook.rendered}"
+  }
+
+  part {
     filename     = "scripts/per-instance/20-master.sh"
     content_type = "text/x-shellscript"
     content      = "${data.template_file.master.rendered}"
@@ -61,6 +72,7 @@ data "template_cloudinit_config" "master" {
     content_type = "text/x-shellscript"
     content      = "${data.template_file.iptables.rendered}"
   }
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -84,21 +96,29 @@ resource "google_compute_instance" "master" {
   machine_type   = "${var.master_machine_type}"
   zone           = "${var.zone}"
 
+  # allow this node to control GCE resources
+  allow_stopping_for_update = true
+  service_account {
+    scopes = [ "cloud-platform" ]
+  }
+
   // This allows this VM to send traffic from containers without NAT.  Without
   // this set GCE will verify that traffic from a VM only comes from an IP
   // assigned to that VM.
   can_ip_forward = true
 
-  disk {
-    image = "ubuntu-os-cloud/ubuntu-1604-lts"
-    type  = "pd-ssd"
-    size  = "200"
+  boot_disk {
+    initialize_params {
+      image = "ubuntu-os-cloud/ubuntu-1604-lts"
+      type  = "pd-standard"
+      size  = "200"
+    }
   }
 
   metadata {
     "user-data" = "${data.template_cloudinit_config.master.rendered}"
     "user-data-encoding" = "base64"
-}
+  }
 
   network_interface {
     subnetwork = "${google_compute_subnetwork.subnet.name}"

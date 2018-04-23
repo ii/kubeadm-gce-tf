@@ -19,7 +19,7 @@
 # This should be done inside of kubeadm.  Fixed but waiting on next release. See
 # https://github.com/kubernetes/kubernetes/issues/35533
 for i in {1..50}; do
-  if kubeadm join --token=${token} ${master-ip} ; then
+  if kubeadm join --token=${token} ${master-ip}:6443 --discovery-token-unsafe-skip-ca-verification ; then
     break
   else
     sleep 15

@@ -95,10 +95,12 @@ resource "google_compute_instance" "node" {
   // assigned to that VM.
   can_ip_forward = true
 
-  disk {
-    image = "ubuntu-os-cloud/ubuntu-1604-lts"
-    type  = "pd-ssd"
-    size  = "200"
+  boot_disk {
+    initialize_params {
+      image = "ubuntu-os-cloud/ubuntu-1604-lts"
+      type  = "pd-standard"
+      size  = "200"
+    }
   }
 
   metadata {
