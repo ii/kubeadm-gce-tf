@@ -44,9 +44,12 @@ rules:
     resources: ["deployments"]
 EOPOLICY
 
+# If we need a cloud-config, it needs to be "/etc/kubernetes/cloud-config"
+# https://github.com/kubernetes/kubernetes/blob/master/pkg/cloudprovider/providers/gce/gce.go#L195
 cat <<EOKUBEADM > /etc/kubernetes/kubeadm-config.yaml
 apiVersion: kubeadm.k8s.io/v1alpha1
 kind: MasterConfiguration
+cloudProvider: gce
 token: ${token}
 auditPolicy:
   path: "/etc/kubernetes/audit-policy.yaml"
