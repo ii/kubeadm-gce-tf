@@ -96,6 +96,12 @@ resource "google_compute_instance" "master" {
   machine_type   = "${var.master_machine_type}"
   zone           = "${var.zone}"
 
+  # allow this node to control GCE resources
+  allow_stopping_for_update = true
+  service_account {
+    scopes = [ "cloud-platform" ]
+  }
+
   // This allows this VM to send traffic from containers without NAT.  Without
   // this set GCE will verify that traffic from a VM only comes from an IP
   // assigned to that VM.
@@ -112,7 +118,7 @@ resource "google_compute_instance" "master" {
   metadata {
     "user-data" = "${data.template_cloudinit_config.master.rendered}"
     "user-data-encoding" = "base64"
-}
+  }
 
   network_interface {
     subnetwork = "${google_compute_subnetwork.subnet.name}"
